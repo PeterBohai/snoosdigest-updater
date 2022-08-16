@@ -1,0 +1,19 @@
+{
+    "version": "1.0",
+    "app_name": "snoosdigest-updater",
+    "environment_variables": {
+        "MAX_NUM_POSTS_PER_SUBREDDIT": "5"
+    },
+    "stages": {
+        "dev": {
+            "environment_variables": {
+                "IS_PROD_SYSTEM": "false"
+            }
+        },
+        "prod": {
+            "environment_variables": {
+                "IS_PROD_SYSTEM": "false"
+            }
+        }
+    }
+}

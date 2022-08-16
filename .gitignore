@@ -1,0 +1,25 @@
+# Chalice
+.chalice/deployments/
+.chalice/deployed/
+.chalice/venv/
+
+# Python
+__pycache__/
+.pytest_cache/
+
+# mypy
+.mypy_cache/
+
+# Env
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE Files
+.idea/
+.vscode/
+
+# MacOS
+.DS_Store
