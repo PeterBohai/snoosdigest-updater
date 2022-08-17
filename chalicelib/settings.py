@@ -7,7 +7,7 @@ load_dotenv()
 IS_PROD_SYSTEM = os.environ['IS_PROD_SYSTEM'].lower() == 'true'
 MAX_NUM_POSTS_PER_SUBREDDIT = int(os.environ['MAX_NUM_POSTS_PER_SUBREDDIT'])
 
-DEV_SETTINGS = {
+_dev_settings = {
     'REDDIT_APP_SETTINGS': {
         'client_id': os.environ['REDDIT_APP_CLIENT_ID'],
         'client_secret': os.environ['REDDIT_APP_SECRET'],
@@ -21,7 +21,7 @@ DEV_SETTINGS = {
     },
 }
 
-PROD_SETTINGS = {
+_prod_settings = {
     'REDDIT_APP_SETTINGS': {
         'client_id': os.environ['REDDIT_APP_CLIENT_ID_PROD'],
         'client_secret': os.environ['REDDIT_APP_SECRET_PROD'],
@@ -34,3 +34,5 @@ PROD_SETTINGS = {
         'db_host': os.environ['DB_HOST_PROD'],
     },
 }
+
+SYS_SETTINGS = _prod_settings if IS_PROD_SYSTEM else _dev_settings
