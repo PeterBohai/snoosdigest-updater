@@ -18,3 +18,7 @@ Base: Any = declarative_base()
 
 class Subreddit(Base):
     __table__ = Table('subreddit', Base.metadata, autoload_with=sql_engine)
+
+
+class SubredditPost(Base):
+    __table__ = Table('subreddit_post', Base.metadata, autoload_with=sql_engine)
