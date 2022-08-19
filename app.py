@@ -1,6 +1,6 @@
-from typing import Any, Iterable
+from typing import Iterable
 
-from chalice import Chalice
+from chalice import Chalice, Cron
 from praw import Reddit as PrawReddit
 from praw.models import Submission as PrawSubmission
 from praw.models import Subreddit as PrawSubreddit
@@ -11,8 +11,8 @@ from chalicelib.models import Subreddit
 app = Chalice(app_name='snoosdigest-updater')
 
 
-# @app.lambda_function(name='reddit-posts')
-def reddit_posts(event: dict, context: Any) -> dict[str, list]:
+@app.schedule(Cron('0/9', '12-3', '?', '*', '*', '*'), name='reddit-posts')
+def reddit_posts(event: dict) -> dict[str, list]:
     print(f'IS_PROD_SYSTEM: {settings.IS_PROD_SYSTEM}')
     app_settings = settings.SYS_SETTINGS
 
@@ -21,8 +21,6 @@ def reddit_posts(event: dict, context: Any) -> dict[str, list]:
     subreddit_objs: list[Subreddit] = utils.get_subreddits_to_update()
     res: dict = {}
     for subreddit_obj in subreddit_objs:
-        if subreddit_obj.subreddit_id != 9:
-            continue
         praw_subreddit: PrawSubreddit = praw_reddit.subreddit(subreddit_obj.display_name)
         subreddit_top_posts: Iterable[PrawSubmission] = praw_subreddit.top(
             'day', limit=settings.MAX_NUM_POSTS_PER_SUBREDDIT
@@ -34,10 +32,29 @@ def reddit_posts(event: dict, context: Any) -> dict[str, list]:
             )
 
             if not current_subreddit_post:
-                utils.insert_subreddit_post(post, subreddit_obj.subreddit_id, i, time_filter='day')
+                print(
+                    f'Attempting to INSERT new subreddit post '
+                    f'(subreddit_id: {subreddit_obj.subreddit_id}, order: {i}, filter: day)'
+                )
+                try:
+                    utils.insert_subreddit_post(
+                        post, subreddit_obj.subreddit_id, i, time_filter='day'
+                    )
+                    print('INSERT was successful')
+                except Exception as err:
+                    print(f'ERROR occurred while INSERTing: {err}')
                 continue
 
             # Update existing subreddit
-            print(f'UPDATE {current_subreddit_post}')
+            print(
+                f'Attempting to UPDATE subreddit post '
+                f'(subreddit_id: {subreddit_obj.subreddit_id}, order: {i}, filter: day)'
+            )
+            try:
+                utils.update_subreddit_post(post, current_subreddit_post, time_filter='day')
+                print('UPDATE was successful')
+            except Exception as err:
+                print(f'ERROR occurred while UPDATing: {err}')
+    print('Completed all Updates')
 
     return res

@@ -1,6 +1,7 @@
 {
     "version": "1.0",
     "app_name": "snoosdigest-updater",
+    "lambda_timeout" : 270,
     "environment_variables": {
         "MAX_NUM_POSTS_PER_SUBREDDIT": "5"
     },

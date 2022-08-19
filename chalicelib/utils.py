@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 
 from praw.models import Submission as PrawSubmission
 from praw.models import Subreddit as PrawSubreddit
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from chalicelib.models import PgSession, Subreddit, SubredditPost
@@ -23,7 +23,7 @@ def get_subreddits_to_update() -> list[Subreddit]:
     return result
 
 
-def get_subreddit_post(subreddit_id: int, order: int, time_filter: str = 'day') -> str:
+def get_subreddit_post(subreddit_id: int, order: int, time_filter: str = 'day') -> SubredditPost:
     statement = select(SubredditPost).where(
         SubredditPost.subreddit_id == subreddit_id,
         SubredditPost.__table__.columns[f'top_{time_filter}_order'] == order,
@@ -63,7 +63,39 @@ def insert_subreddit_post(
     pg_session: Session
     with PgSession.begin() as pg_session:
         pg_session.add(new_post)
-        pg_session.commit()
+
+
+def update_subreddit_post(
+    subreddit_post: PrawSubmission, curr_post: SubredditPost, time_filter: str = 'day'
+) -> None:
+    order_col = f'top_{time_filter}_order'
+    update_statement = (
+        update(SubredditPost)
+        .where(
+            SubredditPost.subreddit_id == curr_post.subreddit_id,
+            getattr(SubredditPost, order_col) == getattr(curr_post, order_col),
+        )
+        .values(
+            reddit_id=subreddit_post.id,
+            reddit_url=subreddit_post.shortlink,
+            title=subreddit_post.title,
+            body=get_subreddit_post_body(subreddit_post),
+            author_name=subreddit_post.author.name if subreddit_post.author else '',
+            upvotes=subreddit_post.score,
+            upvote_ratio=subreddit_post.upvote_ratio,
+            num_comments=subreddit_post.num_comments,
+            img_url=get_img_url(subreddit_post),
+            video_url=get_video_url(subreddit_post),
+            over_18=subreddit_post.over_18,
+            spoiler=subreddit_post.spoiler,
+            created_timestamp_utc=datetime.fromtimestamp(subreddit_post.created_utc),
+            created_unix_timestamp=subreddit_post.created_utc,
+            data_updated_timestamp_utc=datetime.now(tz=timezone.utc),
+        )
+    )
+    pg_session: Session
+    with PgSession.begin() as pg_session:
+        pg_session.execute(update_statement)
 
 
 def generate_full_reddit_link(link_path: str) -> str:
