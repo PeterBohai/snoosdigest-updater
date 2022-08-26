@@ -1,15 +1,14 @@
+import re
+import time
 from datetime import datetime, timezone
+from typing import Any
 
+from praw.models import Redditor as PrawRedditor
 from praw.models import Submission as PrawSubmission
-from praw.models import Subreddit as PrawSubreddit
 from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from chalicelib.models import PgSession, Subreddit, SubredditPost
-
-
-def update_or_insert_subreddit_posts(praw_subreddit: PrawSubreddit, time_filter: str) -> list[dict]:
-    pass
 
 
 def get_subreddits_to_update() -> list[Subreddit]:
@@ -40,12 +39,13 @@ def get_subreddit_post(subreddit_id: int, order: int, time_filter: str = 'day') 
 def insert_subreddit_post(
     subreddit_post: PrawSubmission, subreddit_id: int, order: int, time_filter: str = 'day'
 ) -> None:
+    start_time = time.time()
     new_post = SubredditPost(
         reddit_id=subreddit_post.id,
         reddit_url=subreddit_post.shortlink,
         title=subreddit_post.title,
         body=get_subreddit_post_body(subreddit_post),
-        author_name=subreddit_post.author.name if subreddit_post.author else '',
+        author_name=get_author_name(subreddit_post.author),
         upvotes=subreddit_post.score,
         upvote_ratio=subreddit_post.upvote_ratio,
         num_comments=subreddit_post.num_comments,
@@ -63,11 +63,13 @@ def insert_subreddit_post(
     pg_session: Session
     with PgSession.begin() as pg_session:
         pg_session.add(new_post)
+    print(f'    --> {time.time() - start_time:.4f}s - Time taken to insert_subreddit_post')
 
 
 def update_subreddit_post(
     subreddit_post: PrawSubmission, curr_post: SubredditPost, time_filter: str = 'day'
 ) -> None:
+    start_time = time.time()
     order_col = f'top_{time_filter}_order'
     update_statement = (
         update(SubredditPost)
@@ -80,7 +82,7 @@ def update_subreddit_post(
             reddit_url=subreddit_post.shortlink,
             title=subreddit_post.title,
             body=get_subreddit_post_body(subreddit_post),
-            author_name=subreddit_post.author.name if subreddit_post.author else '',
+            author_name=get_author_name(subreddit_post.author),
             upvotes=subreddit_post.score,
             upvote_ratio=subreddit_post.upvote_ratio,
             num_comments=subreddit_post.num_comments,
@@ -97,6 +99,8 @@ def update_subreddit_post(
     with PgSession.begin() as pg_session:
         pg_session.execute(update_statement)
 
+    print(f'    --> {time.time() - start_time:.4f}s - Time taken to update_subreddit_post')
+
 
 def generate_full_reddit_link(link_path: str) -> str:
     return f'https://www.reddit.com{link_path}'.strip()
@@ -109,6 +113,14 @@ def generate_reddit_link_from_id(reddit_id: str) -> str:
 def normalize_text_content(text: str) -> str:
     text = text.replace('&#x200B;', '')
     return text.strip()
+
+
+def get_author_name(author_obj: PrawRedditor) -> str:
+    # Directly getting post.author.name means an additional request. Extract from repr instead.
+    if not author_obj:
+        return ''
+    m: Any = re.search("name='(.*)'", repr(author_obj))
+    return m.group(1)
 
 
 def get_img_url(subreddit_post: PrawSubmission) -> str:
