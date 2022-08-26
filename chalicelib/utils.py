@@ -81,10 +81,11 @@ def update_subreddit_post(subreddit_post: PrawSubmission, curr_post: SubredditPo
         curr_post.upvotes = subreddit_post.score
         curr_post.upvote_ratio = subreddit_post.upvote_ratio
         curr_post.num_comments = subreddit_post.num_comments
-        curr_post.img_url = (get_img_url(subreddit_post),)
-        curr_post.video_url = (get_video_url(subreddit_post),)
-        curr_post.over_18 = (subreddit_post.over_18,)
-        curr_post.spoiler = (subreddit_post.spoiler,)
+        curr_post.img_url = get_img_url(subreddit_post)
+        curr_post.video_url = get_video_url(subreddit_post)
+        curr_post.over_18 = subreddit_post.over_18
+        curr_post.spoiler = subreddit_post.spoiler
+        curr_post.data_updated_timestamp_utc = datetime.now(tz=timezone.utc)
         if curr_post.reddit_id != post_id:
             print("*New* Post update found current reddit_id != post_id")
             curr_post.reddit_id = post_id
