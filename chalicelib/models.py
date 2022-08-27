@@ -57,3 +57,4 @@ class SubredditPost(Base):
     top_month_order = Column(SMALLINT)
     top_year_order = Column(SMALLINT)
     top_all_order = Column(SMALLINT)
+    update_source = Column(VARCHAR(32))

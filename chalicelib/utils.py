@@ -57,6 +57,7 @@ def insert_subreddit_post(
         created_timestamp_utc=datetime.fromtimestamp(subreddit_post.created_utc),
         created_unix_timestamp=subreddit_post.created_utc,
         data_updated_timestamp_utc=datetime.now(tz=timezone.utc),
+        update_source='lambda-snoosdigest-updater',
         subreddit_id=subreddit_id,
         **{f'top_{time_filter}_order': order},
     )
@@ -67,14 +68,22 @@ def insert_subreddit_post(
     print(f'    --> {time.time() - start_time:.4f}s - Time taken to insert_subreddit_post')
 
 
-def update_subreddit_post(subreddit_post: PrawSubmission, curr_post: SubredditPost) -> None:
+def update_subreddit_post(
+    subreddit_post: PrawSubmission, subreddit_id: int, order: int, time_filter: str = 'day'
+) -> None:
     start_time = time.time()
+
+    statement = select(SubredditPost).where(
+        SubredditPost.subreddit_id == subreddit_id,
+        SubredditPost.__table__.columns[f'top_{time_filter}_order'] == order,
+    )
     post_id = subreddit_post.id
     post_permalink = subreddit_post.permalink
     post_selftext = subreddit_post.selftext
 
     pg_session: Session
-    with PgSession.begin():
+    with PgSession.begin() as pg_session:
+        curr_post = pg_session.execute(statement).scalars().first()
         curr_post.body = get_subreddit_post_body(
             subreddit_post, post_id, post_permalink, post_selftext
         )
@@ -86,6 +95,7 @@ def update_subreddit_post(subreddit_post: PrawSubmission, curr_post: SubredditPo
         curr_post.over_18 = subreddit_post.over_18
         curr_post.spoiler = subreddit_post.spoiler
         curr_post.data_updated_timestamp_utc = datetime.now(tz=timezone.utc)
+        curr_post.update_source = 'lambda-snoosdigest-updater'
         if curr_post.reddit_id != post_id:
             print("*New* Post update found current reddit_id != post_id")
             curr_post.reddit_id = post_id
@@ -94,8 +104,6 @@ def update_subreddit_post(subreddit_post: PrawSubmission, curr_post: SubredditPo
             curr_post.author_name = subreddit_post.author.name
             curr_post.created_timestamp_utc = datetime.fromtimestamp(subreddit_post.created_utc)
             curr_post.created_unix_timestamp = subreddit_post.created_utc
-
-        curr_post.data_updated_timestamp_utc = datetime.now(tz=timezone.utc)
 
     print(f'    --> {time.time() - start_time:.4f}s - Time taken to update_subreddit_post')
 

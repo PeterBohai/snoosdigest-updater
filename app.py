@@ -19,7 +19,7 @@ for logger_name in ("praw", "prawcore"):
     logger.addHandler(handler)
 
 
-@app.schedule(Cron('0/9', '12-3', '?', '*', '*', '*'), name='reddit-posts')
+@app.schedule(Cron('0/9', '12-4', '?', '*', '*', '*'), name='reddit-posts')
 def reddit_posts(event: dict) -> dict[str, list]:
     start_time = time.time()
     print(f'IS_PROD_SYSTEM: {settings.IS_PROD_SYSTEM}')
@@ -64,7 +64,7 @@ def reddit_posts(event: dict) -> dict[str, list]:
                 f'order: {post_order}, post.id: {post_id}, filter: day)'
             )
             try:
-                utils.update_subreddit_post(post, curr_subreddit_post)
+                utils.update_subreddit_post(post, subreddit_id, post_order, time_filter='day')
             except Exception as err:
                 print(f'ERROR occurred while UPDATing: {err}')
         print(
