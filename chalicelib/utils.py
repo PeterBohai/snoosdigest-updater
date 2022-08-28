@@ -12,7 +12,7 @@ from chalicelib.settings import UPDATE_SOURCE
 
 
 def get_subreddits_to_update() -> list[Subreddit]:
-    statement = select(Subreddit)
+    statement = select(Subreddit).where(Subreddit.last_viewed_timestamp.isnot(None))
 
     pg_session: Session
     with PgSession.begin() as pg_session:
