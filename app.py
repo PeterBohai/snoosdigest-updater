@@ -1,5 +1,6 @@
 import logging
 import time
+from typing import Iterable
 
 from chalice import Chalice, Cron
 from praw import Reddit as PrawReddit
@@ -71,5 +72,24 @@ def reddit_posts(event: dict) -> dict[str, list]:
             f'{time.time() - start_posts:.4f}s - Total time taken to get top/hot {num_posts} '
             f'<{subreddit_name}> posts'
         )
-    print(f'>>>>>>>> {time.time() - start_time:.4f}s - Total time, {total_posts} - Total posts')
+    print(f'>>> {time.time() - start_time:.4f}s - Total time, {total_posts} - Total posts')
+    return {}
+
+
+@app.lambda_function('subreddit-list')
+def subreddit_list(event: dict, context: dict) -> dict:
+    start_time = time.time()
+    print(f'IS_PROD_SYSTEM: {settings.IS_PROD_SYSTEM}')
+    app_settings = settings.SYS_SETTINGS
+    num_subreddits = app_settings['NUM_SUBREDDITS']
+    praw_reddit: PrawReddit = PrawReddit(**app_settings['REDDIT_APP_SETTINGS'])
+
+    popular_subreddits: Iterable[PrawSubreddit] = praw_reddit.subreddits.popular(
+        limit=num_subreddits
+    )
+    for i, praw_subreddit in enumerate(popular_subreddits, 1):
+        print(f'#{i} Attempting to insert or update subreddit')
+        utils.insert_or_update_subreddit(praw_subreddit)
+
+    print(f'>>> {time.time() - start_time:.4f}s - Total time to update {num_subreddits} subreddits')
     return {}

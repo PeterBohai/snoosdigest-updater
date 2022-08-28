@@ -20,6 +20,7 @@ _dev_settings = {
         'db_password': os.environ['DB_PASSWORD_DEV'],
         'db_host': os.environ['DB_HOST_DEV'],
     },
+    'NUM_SUBREDDITS': 100,
 }
 
 _prod_settings = {
@@ -34,6 +35,7 @@ _prod_settings = {
         'db_password': os.environ['DB_PASSWORD_PROD'],
         'db_host': os.environ['DB_HOST_PROD'],
     },
+    'NUM_SUBREDDITS': 5000,
 }
 
-SYS_SETTINGS = _prod_settings if IS_PROD_SYSTEM else _dev_settings
+SYS_SETTINGS: dict = _prod_settings if IS_PROD_SYSTEM else _dev_settings

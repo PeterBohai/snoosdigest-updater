@@ -1,7 +1,6 @@
 {
     "version": "1.0",
     "app_name": "snoosdigest-updater",
-    "lambda_timeout" : 270,
     "environment_variables": {
         "MAX_NUM_POSTS_PER_SUBREDDIT": "5"
     },
@@ -15,6 +14,14 @@
             "environment_variables": {
                 "IS_PROD_SYSTEM": "false"
             }
+        }
+    },
+    "lambda_functions": {
+        "reddit-posts": {
+            "lambda_timeout" : 270
+        },
+        "subreddit-list": {
+            "lambda_timeout" : 600
         }
     }
 }

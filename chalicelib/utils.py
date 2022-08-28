@@ -1,5 +1,5 @@
 import time
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from typing import Optional
 
 from praw.models import Submission as PrawSubmission
@@ -121,6 +121,41 @@ def update_subreddit(praw_subreddit: PrawSubreddit) -> None:
         curr_subreddit.data_updated_timestamp_utc = datetime.now(tz=timezone.utc)
         curr_subreddit.update_source = UPDATE_SOURCE
     print(f'    --> {time.time() - start_time:.4f}s - Time taken to update_subreddit')
+
+
+def insert_or_update_subreddit(praw_subreddit: PrawSubreddit) -> None:
+    start_time = time.time()
+    subreddit_name = praw_subreddit.display_name
+    subreddit_reddit_id = praw_subreddit.id
+    statement = select(Subreddit).where(Subreddit.reddit_id == subreddit_reddit_id)
+    pg_session: Session
+    with PgSession.begin() as pg_session:
+        curr_subreddit = pg_session.execute(statement).scalars().first()
+        curr_datetime = datetime.now(tz=timezone.utc)
+
+        if curr_subreddit:
+            print(f'** UPDATE subreddit, <{subreddit_name}> already exists...')
+            curr_subreddit.subscribers = praw_subreddit.subscribers
+            curr_subreddit.data_updated_timestamp_utc = curr_datetime
+            curr_subreddit.update_source = UPDATE_SOURCE
+        else:
+            print(f'** INSERT new subreddit, <{subreddit_name}> is not in the database...')
+            created_unix_timestamp = int(praw_subreddit.created_utc)
+            new_subreddit = Subreddit(
+                reddit_id=subreddit_reddit_id,
+                display_name=subreddit_name,
+                display_name_prefixed=praw_subreddit.display_name_prefixed,
+                reddit_url_path=praw_subreddit.url,
+                subscribers=praw_subreddit.subscribers,
+                created_date_utc=date.fromtimestamp(created_unix_timestamp),
+                created_unix_timestamp=created_unix_timestamp,
+                data_updated_timestamp_utc=curr_datetime,
+                inserted_at=curr_datetime,
+                update_source=UPDATE_SOURCE,
+            )
+            pg_session.add(new_subreddit)
+
+    print(f'    --> {time.time() - start_time:.4f}s - Time taken to update_or_insert_subreddit')
 
 
 def generate_full_reddit_link(link_path: str) -> str:
