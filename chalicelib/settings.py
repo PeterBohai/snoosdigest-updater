@@ -6,6 +6,7 @@ load_dotenv()
 
 IS_PROD_SYSTEM = os.environ['IS_PROD_SYSTEM'].lower() == 'true'
 MAX_NUM_POSTS_PER_SUBREDDIT = int(os.environ['MAX_NUM_POSTS_PER_SUBREDDIT'])
+UPDATE_SOURCE = 'lambda-snoosdigest-updater'
 
 _dev_settings = {
     'REDDIT_APP_SETTINGS': {

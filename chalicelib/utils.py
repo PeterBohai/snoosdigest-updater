@@ -3,10 +3,12 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from praw.models import Submission as PrawSubmission
+from praw.models import Subreddit as PrawSubreddit
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from chalicelib.models import PgSession, Subreddit, SubredditPost
+from chalicelib.settings import UPDATE_SOURCE
 
 
 def get_subreddits_to_update() -> list[Subreddit]:
@@ -57,7 +59,7 @@ def insert_subreddit_post(
         created_timestamp_utc=datetime.fromtimestamp(subreddit_post.created_utc),
         created_unix_timestamp=subreddit_post.created_utc,
         data_updated_timestamp_utc=datetime.now(tz=timezone.utc),
-        update_source='lambda-snoosdigest-updater',
+        update_source=UPDATE_SOURCE,
         subreddit_id=subreddit_id,
         **{f'top_{time_filter}_order': order},
     )
@@ -95,7 +97,7 @@ def update_subreddit_post(
         curr_post.over_18 = subreddit_post.over_18
         curr_post.spoiler = subreddit_post.spoiler
         curr_post.data_updated_timestamp_utc = datetime.now(tz=timezone.utc)
-        curr_post.update_source = 'lambda-snoosdigest-updater'
+        curr_post.update_source = UPDATE_SOURCE
         if curr_post.reddit_id != post_id:
             print("*New* Post update found current reddit_id != post_id")
             curr_post.reddit_id = post_id
@@ -106,6 +108,19 @@ def update_subreddit_post(
             curr_post.created_unix_timestamp = subreddit_post.created_utc
 
     print(f'    --> {time.time() - start_time:.4f}s - Time taken to update_subreddit_post')
+
+
+def update_subreddit(praw_subreddit: PrawSubreddit) -> None:
+    start_time = time.time()
+
+    statement = select(Subreddit).where(Subreddit.reddit_id == praw_subreddit.id)
+    pg_session: Session
+    with PgSession.begin() as pg_session:
+        curr_subreddit = pg_session.execute(statement).scalars().first()
+        curr_subreddit.subscribers = praw_subreddit.subscribers
+        curr_subreddit.data_updated_timestamp_utc = datetime.now(tz=timezone.utc)
+        curr_subreddit.update_source = UPDATE_SOURCE
+    print(f'    --> {time.time() - start_time:.4f}s - Time taken to update_subreddit')
 
 
 def generate_full_reddit_link(link_path: str) -> str:
