@@ -12,7 +12,7 @@
         },
         "prod": {
             "environment_variables": {
-                "IS_PROD_SYSTEM": "false"
+                "IS_PROD_SYSTEM": "true"
             }
         }
     },
