@@ -18,7 +18,7 @@
     },
     "lambda_functions": {
         "reddit-posts": {
-            "lambda_timeout" : 270
+            "lambda_timeout" : 290
         },
         "subreddit-list": {
             "lambda_timeout" : 900

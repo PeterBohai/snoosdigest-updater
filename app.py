@@ -2,7 +2,7 @@ import logging
 import time
 from typing import Iterable
 
-from chalice import Chalice, Cron
+from chalice import Chalice, Rate
 from praw import Reddit as PrawReddit
 from praw.models import Submission as PrawSubmission
 from praw.models import Subreddit as PrawSubreddit
@@ -20,7 +20,7 @@ for logger_name in ("praw", "prawcore"):
     logger.addHandler(handler)
 
 
-@app.schedule(Cron('0/9', '12-4', '?', '*', '*', '*'), name='reddit-posts')
+@app.schedule(Rate(8, unit=Rate.MINUTES), name='reddit-posts')
 def reddit_posts(event: dict) -> dict[str, list]:
     start_time = time.time()
     print(f'IS_PROD_SYSTEM: {settings.IS_PROD_SYSTEM}')
