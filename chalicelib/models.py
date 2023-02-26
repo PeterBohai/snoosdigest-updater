@@ -40,6 +40,7 @@ class SubredditPost(Base):
     reddit_url = Column(VARCHAR(256))
     title = Column(VARCHAR(300))
     body = Column(TEXT)
+    body_url = Column(TEXT)
     author_name = Column(VARCHAR(64))
     upvotes = Column(Integer)
     upvote_ratio = Column(Float)

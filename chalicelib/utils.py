@@ -48,6 +48,9 @@ def insert_subreddit_post(
         reddit_url=subreddit_post.shortlink,
         title=subreddit_post.title,
         body=get_subreddit_post_body(subreddit_post, post_id, post_permalink, post_selftext),
+        body_url=get_subreddit_post_body_url(
+            subreddit_post, post_id, post_permalink, post_selftext
+        ),
         author_name=subreddit_post.author.name,
         upvotes=subreddit_post.score,
         upvote_ratio=subreddit_post.upvote_ratio,
@@ -87,6 +90,9 @@ def update_subreddit_post(
     with PgSession.begin() as pg_session:
         curr_post = pg_session.execute(statement).scalars().first()
         curr_post.body = get_subreddit_post_body(
+            subreddit_post, post_id, post_permalink, post_selftext
+        )
+        curr_post.body_url = get_subreddit_post_body_url(
             subreddit_post, post_id, post_permalink, post_selftext
         )
         curr_post.upvotes = subreddit_post.score
@@ -184,24 +190,37 @@ def get_video_url(subreddit_post: PrawSubmission) -> str:
     return ''
 
 
+def _extract_body_text_or_url(
+    body_text: str, subreddit_post: PrawSubmission, post_id: str, post_permalink: str
+) -> str:
+    if body_text:
+        return normalize_text_content(body_text)
+    # Check if body is just a http link
+    permalink: str = generate_full_reddit_link(post_permalink)
+    if subreddit_post.id_from_url(permalink) != post_id:
+        # Link is another reddit post
+        return normalize_text_content(permalink)
+    if hasattr(subreddit_post, "url_overridden_by_dest"):
+        # Link is a non-reddit article
+        return normalize_text_content(subreddit_post.url_overridden_by_dest)
+    if hasattr(subreddit_post, "crosspost_parent_list"):
+        # Check if body is a cross-post (links to another reddit post in the post body)
+        crosspost_id: str = subreddit_post.crosspost_parent_list[0].get("id", "")
+        crosspost_link = generate_reddit_link_from_id(crosspost_id)
+        return normalize_text_content(crosspost_link)
+    return ""
+
+
 def get_subreddit_post_body(
     subreddit_post: PrawSubmission, post_id: str, post_permalink: str, post_selftext: Optional[str]
 ) -> str:
-    body: str = post_selftext or ''
+    return _extract_body_text_or_url(post_selftext or '', subreddit_post, post_id, post_permalink)
 
-    # Check if body is just a http link
-    permalink: str = generate_full_reddit_link(post_permalink)
-    if not body:
-        if subreddit_post.id_from_url(permalink) != post_id:
-            # Link is another reddit post
-            body = permalink
-        elif hasattr(subreddit_post, 'url_overridden_by_dest'):
-            # Link is a non-reddit article
-            body = subreddit_post.url_overridden_by_dest
 
-    # Check if body is a cross-post (nests another reddit post directly in the post body)
-    if not body and hasattr(subreddit_post, 'crosspost_parent_list'):
-        crosspost_id: str = subreddit_post.crosspost_parent_list[0].get('id', '')
-        body = generate_reddit_link_from_id(crosspost_id)
-
-    return normalize_text_content(body)
+def get_subreddit_post_body_url(
+    subreddit_post: PrawSubmission, post_id: str, post_permalink: str, post_selftext: Optional[str]
+) -> str:
+    body: str = post_selftext or ""
+    if body:
+        return ""
+    return _extract_body_text_or_url(body, subreddit_post, post_id, post_permalink)
